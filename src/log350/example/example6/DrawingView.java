@@ -4,6 +4,8 @@ package log350.example.example6;
 import java.util.ArrayList;
 //import java.util.List;
 
+import android.app.Activity;
+import android.app.Application;
 import android.content.Context;
 //import android.graphics.Matrix;
 import android.graphics.Canvas;
@@ -13,7 +15,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.view.MotionEvent;
 import android.view.View;
-
+import android.widget.Toast;
 
 
 // This class stores the current position of a finger,
@@ -25,7 +27,7 @@ import android.view.View;
 // subsequent positions of the finger, and is destroyed
 // when the finger is lifted off the multitouch surface.
 class MyCursor {
-	
+
 	// Each finger in contact with the multitouch surface is given
 	// a unique id by the framework (or computing platform).
 	// There is no guarantee that these ids will be consecutive nor increasing.
@@ -178,23 +180,27 @@ public class DrawingView extends View {
 	static final int MODE_CAMERA_MANIPULATION = 1; // the user is panning/zooming the camera
 	static final int MODE_SHAPE_MANIPULATION = 2; // the user is translating/rotating/scaling a shape
 	static final int MODE_LASSO = 3; // the user is drawing a lasso to select shapes
+	static final int MODE_ERASE = 4; // the user can errase a selected shapes
 	int currentMode = MODE_NEUTRAL;
 
 	// This is only used when currentMode==MODE_SHAPE_MANIPULATION, otherwise it is equal to -1
 	int indexOfShapeBeingManipulated = -1;
 
+	// Lasso button
 	MyButton lassoButton = new MyButton( "Lasso", 10, 70, 140, 140 );
-	
+	// Erase button
+	MyButton eraseButton = new MyButton( "Erase", 10, 270, 140, 140 );
+
 	OnTouchListener touchListener;
-	
+
 	public DrawingView(Context context) {
 		super(context);
-		
+
 		setFocusable(true);
 		setFocusableInTouchMode(true);
-		
+
 		this.setOnTouchListener(getTouchListener());
-		
+
 		this.setBackgroundColor(Color.WHITE);
 		paint.setColor(Color.BLACK);
 		paint.setAntiAlias(true);
@@ -219,8 +225,8 @@ public class DrawingView extends View {
 		shapeContainer.addShape( arrayList );
 		arrayList.clear();
 	}
-	
-	
+
+
 	@Override
 	protected void onDraw(Canvas canvas) {
 		// The view is constantly redrawn by this method
@@ -255,6 +261,7 @@ public class DrawingView extends View {
 		gw.setCoordinateSystemToPixels();
 
 		lassoButton.draw( gw, currentMode == MODE_LASSO );
+        eraseButton.draw( gw, currentMode == MODE_ERASE );
 
 		if ( currentMode == MODE_LASSO ) {
 			MyCursor lassoCursor = cursorContainer.getCursorByType( MyCursor.TYPE_DRAGGING, 0 );
@@ -272,7 +279,7 @@ public class DrawingView extends View {
 		}
 
 	}
-	
+
 	/**
 	 * Returns a listener
 	 * @return a listener
@@ -280,7 +287,7 @@ public class DrawingView extends View {
 	private OnTouchListener getTouchListener(){
 		if ( touchListener == null ) {
 			touchListener = new OnTouchListener() {
-				
+
 				public boolean onTouch(View v, MotionEvent event) {
 
 					int type = MotionEvent.ACTION_MOVE;
@@ -329,7 +336,7 @@ public class DrawingView extends View {
 						// The current event is probably of type MOVE or UP.
 
 						cursorContainer.updateCursorById( id, x, y );
-						
+
 						if ( type == MotionEvent.ACTION_MOVE ) {
 							// Other fingers may have also moved, and there new positions are available in the event passed to us.
 							// For safety, we update all cursors now with their latest positions.
@@ -339,7 +346,7 @@ public class DrawingView extends View {
 							}
 						}
 					}
-					
+
 					switch ( currentMode ) {
 					case MODE_NEUTRAL :
 						if ( cursorContainer.getNumCursors() == 1 && type == MotionEvent.ACTION_DOWN ) {
@@ -350,6 +357,10 @@ public class DrawingView extends View {
 								currentMode = MODE_LASSO;
 								cursor.setType( MyCursor.TYPE_BUTTON );
 							}
+                            else if ( eraseButton.contains(p_pixels) ) {
+                                currentMode = MODE_ERASE;
+                                cursor.setType( MyCursor.TYPE_BUTTON );
+                            }
 							else if ( indexOfShapeBeingManipulated >= 0 ) {
 								currentMode = MODE_SHAPE_MANIPULATION;
 								cursor.setType( MyCursor.TYPE_DRAGGING );
@@ -379,18 +390,34 @@ public class DrawingView extends View {
 						}
 						break;
 					case MODE_SHAPE_MANIPULATION :
-						if ( cursorContainer.getNumCursors() == 2 && type == MotionEvent.ACTION_MOVE && indexOfShapeBeingManipulated>=0 ) {
-							MyCursor cursor0 = cursorContainer.getCursorByIndex( 0 );
-							MyCursor cursor1 = cursorContainer.getCursorByIndex( 1 );
-							Shape shape = shapeContainer.getShape( indexOfShapeBeingManipulated );
+						// Filter if cursors exist, if we are moving and if the index of the shape is >= 0
+						if ( cursorContainer.getNumCursors()>0 && type == MotionEvent.ACTION_MOVE && indexOfShapeBeingManipulated>=0 ) {
+							if ( cursorContainer.getNumCursors() == 1 && !selectedShapes.isEmpty()) {
+								MyCursor cursor0 = cursorContainer.getCursorByIndex(0);
+								//Shape shape = shapeContainer.getShape(indexOfShapeBeingManipulated);
+								for(Shape shape : selectedShapes) {
+									// Using method for one point
+									Point2DUtil.transformPointsBasedOnDisplacementOfOnePoint(
+											shape.getPoints(),
+											gw.convertWorldSpaceUnitsToPixels(cursor0.getPreviousPosition()),
+											gw.convertWorldSpaceUnitsToPixels(cursor0.getCurrentPosition())
+									);
+								}
+							}
 
-							Point2DUtil.transformPointsBasedOnDisplacementOfTwoPoints(
-								shape.getPoints(),
-								gw.convertPixelsToWorldSpaceUnits( cursor0.getPreviousPosition() ),
-								gw.convertPixelsToWorldSpaceUnits( cursor1.getPreviousPosition() ),
-								gw.convertPixelsToWorldSpaceUnits( cursor0.getCurrentPosition() ),
-								gw.convertPixelsToWorldSpaceUnits( cursor1.getCurrentPosition() )
-							);
+							if ( cursorContainer.getNumCursors() == 2) {
+								MyCursor cursor0 = cursorContainer.getCursorByIndex(0);
+								MyCursor cursor1 = cursorContainer.getCursorByIndex(1);
+								Shape shape = shapeContainer.getShape(indexOfShapeBeingManipulated);
+
+								Point2DUtil.transformPointsBasedOnDisplacementOfTwoPoints(
+										shape.getPoints(),
+										gw.convertPixelsToWorldSpaceUnits(cursor0.getPreviousPosition()),
+										gw.convertPixelsToWorldSpaceUnits(cursor1.getPreviousPosition()),
+										gw.convertPixelsToWorldSpaceUnits(cursor0.getCurrentPosition()),
+										gw.convertPixelsToWorldSpaceUnits(cursor1.getCurrentPosition())
+								);
+							}
 						}
 						else if ( type == MotionEvent.ACTION_UP ) {
 							cursorContainer.removeCursorByIndex( cursorIndex );
@@ -434,10 +461,32 @@ public class DrawingView extends View {
 							}
 						}
 						break;
+                    case MODE_ERASE :
+                        Point2D point_x_y = new Point2D(x,y);
+                        Point2D p_world = gw.convertPixelsToWorldSpaceUnits( point_x_y );
+                        indexOfShapeBeingManipulated = shapeContainer.indexOfShapeContainingGivenPoint( p_world );
+                        if ( type == MotionEvent.ACTION_DOWN ) {
+                            if(cursorContainer.getNumCursors() == 2 && indexOfShapeBeingManipulated >= 0) {
+                                Shape shapeToErase = shapeContainer.getShape(indexOfShapeBeingManipulated);
+                                shapeContainer.deleteShape(shapeToErase);
+                                selectedShapes.remove(shapeToErase);
+                                selectedShapes.clear();
+                            }
+                        }
+                        else if ( type == MotionEvent.ACTION_MOVE ) {
+                            // no further updating necessary here
+                        }
+                        else if ( type == MotionEvent.ACTION_UP ) {
+                            cursorContainer.removeCursorByIndex( cursorIndex );
+                            if ( cursorContainer.getNumCursors() == 0 ) {
+                                currentMode = MODE_NEUTRAL;
+                            }
+                        }
+                        break;
 					}
-					
+
 					v.invalidate();
-					
+
 					return true;
 				}
 			};
