@@ -182,8 +182,11 @@ public class DrawingView extends View {
 	static final int MODE_SHAPE_MANIPULATION = 2; // the user is translating/rotating/scaling a shape
 	static final int MODE_LASSO = 3; // the user is drawing a lasso to select shapes
 	static final int MODE_ERASE = 4; // the user can errase a selected shapes
+	static final int MODE_CREATE_SHAPE = 5; // the user can create a new shape
+
 	int currentMode = MODE_NEUTRAL;
-	int erase_on = 0;
+	int erase_on = 0;  // flag set to 1 when button erase is clicked on
+	int create_on = 0; // flag set to 1 when button create is clicked on
 
 	// This is only used when currentMode==MODE_SHAPE_MANIPULATION, otherwise it is equal to -1
 	int indexOfShapeBeingManipulated = -1;
@@ -194,6 +197,8 @@ public class DrawingView extends View {
 	MyButton lassoButton = new MyButton( "Lasso", 10, 70, 140, 140 );
 	// Erase button
 	MyButton eraseButton = new MyButton( "Erase", 10, 270, 140, 140 );
+	// Shape creation button
+	MyButton createButton = new MyButton( "Create", 10, 470, 140, 140 );
 
 	OnTouchListener touchListener;
 
@@ -265,6 +270,7 @@ public class DrawingView extends View {
 
 		lassoButton.draw( gw, currentMode == MODE_LASSO );
 		eraseButton.draw( gw, currentMode == MODE_ERASE );
+		createButton.draw( gw, currentMode == MODE_CREATE_SHAPE );
 
 		if ( currentMode == MODE_LASSO ) {
 			MyCursor lassoCursor = cursorContainer.getCursorByType( MyCursor.TYPE_DRAGGING, 0 );
@@ -273,6 +279,7 @@ public class DrawingView extends View {
 				gw.fillPolygon( lassoCursor.getPositions() );
 			}
 		}
+
 
 		if ( cursorContainer.getNumCursors() > 0 ) {
 			gw.setFontHeight( 30 );
@@ -368,6 +375,13 @@ public class DrawingView extends View {
 										cursor.setType( MyCursor.TYPE_IGNORE );
 									}
 								}
+								else if ( createButton.contains(p_pixels) ) {
+									if (create_on == 0) {
+										create_on = 1;
+										currentMode = MODE_CREATE_SHAPE;
+										cursor.setType( MyCursor.TYPE_IGNORE );
+									}
+								}
 								else if ( indexOfShapeBeingManipulated >= 0 || indexOfSelectionBeingManipulated>=0 ) {
 									currentMode = MODE_SHAPE_MANIPULATION;
 									cursor.setType( MyCursor.TYPE_DRAGGING );
@@ -445,8 +459,10 @@ public class DrawingView extends View {
 								}
 							}
 							break;
+
 						case MODE_LASSO :
 							if ( type == MotionEvent.ACTION_DOWN ) {
+
 								if ( cursorContainer.getNumCursorsOfGivenType(MyCursor.TYPE_DRAGGING) == 1 )
 									// there's already a finger dragging out the lasso
 									cursor.setType(MyCursor.TYPE_IGNORE);
@@ -481,6 +497,8 @@ public class DrawingView extends View {
 								createShapeFromSelection();
 							}
 							break;
+
+
 						case MODE_ERASE :
 							Point2D point_x_y = new Point2D(x,y);
 							Point2D p_world = gw.convertPixelsToWorldSpaceUnits( point_x_y );
@@ -502,6 +520,33 @@ public class DrawingView extends View {
 							else if ( type == MotionEvent.ACTION_UP ) {
 								cursorContainer.removeCursorByIndex(cursorIndex);
 							}
+							break;
+
+						case MODE_CREATE_SHAPE :
+							Point2D pt_x_y = new Point2D(x,y);
+							Point2D pt_world = gw.convertPixelsToWorldSpaceUnits( pt_x_y );
+							indexOfShapeBeingManipulated = shapeContainer.indexOfShapeContainingGivenPoint( pt_world );
+
+							if ( type == MotionEvent.ACTION_DOWN) {
+								if (createButton.contains(pt_x_y) ) {
+									create_on = 0;
+									currentMode = MODE_NEUTRAL;
+								} else if(indexOfShapeBeingManipulated == -1) {
+									createShape(pt_world);
+								}
+							}
+							else if ( type == MotionEvent.ACTION_MOVE ) {
+								// no further updating necessary here
+							}
+							else if ( type == MotionEvent.ACTION_UP ) {
+								cursorContainer.removeCursorByIndex(cursorIndex);
+							}
+
+							break;
+
+						default:
+							currentMode = MODE_NEUTRAL;
+							cursor.setType( MyCursor.TYPE_IGNORE );
 					}
 
 					v.invalidate();
@@ -510,6 +555,19 @@ public class DrawingView extends View {
 			};
 		}
 		return touchListener;
+	}
+
+	public void createShape(Point2D point) {
+		ArrayList< Point2D > new_shape = new ArrayList< Point2D >();
+
+		new_shape.add( new Point2D(point.x() + 150,point.y() + 150) );
+		new_shape.add( new Point2D(point.x() - 150,point.y() + 150) );
+		new_shape.add( new Point2D(point.x() + 150,point.y() - 150) );
+		new_shape.add( new Point2D(point.x() - 150,point.y() - 150) );
+		//new_shape.add( new Point2D(400,350) );
+		new_shape = Point2DUtil.computeConvexHull( new_shape );
+		shapeContainer.addShape(new_shape);
+		shapeContainer.draw( gw, -1 );
 	}
 
 	public void createShapeFromSelection(){
