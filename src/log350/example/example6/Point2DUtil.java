@@ -69,9 +69,9 @@ public class Point2DUtil {
 			float yj = pj.y();
 
 			if (
-				(((yi <= q.y()) && (q.y() < yj)) || ((yj <= q.y()) && (q.y() < yi)))
-				&& (q.x() < (xj - xi) * (q.y() - yi) / (yj - yi) + xi)
-			) {
+					(((yi <= q.y()) && (q.y() < yj)) || ((yj <= q.y()) && (q.y() < yi)))
+							&& (q.x() < (xj - xi) * (q.y() - yi) / (yj - yi) + xi)
+					) {
 				returnValue = ! returnValue;
 			}
 		}
@@ -84,8 +84,8 @@ public class Point2DUtil {
 	// an algorithm nicely explained at
 	//    http://www.personal.kent.edu/~rmuhamma/Compgeometry/MyCG/ConvexHull/GrahamScan/grahamScan.htm
 	static public ArrayList< Point2D > computeConvexHull(
-		// input
-		ArrayList< Point2D > points
+			// input
+			ArrayList< Point2D > points
 	) {
 		if ( points == null ) return null;
 		if ( points.size() < 3 ) {
@@ -242,8 +242,8 @@ public class Point2DUtil {
 	}
 
 	static public ArrayList< Point2D > computeExpandedPolygon(
-		ArrayList< Point2D > points, // input
-		float marginThickness
+			ArrayList< Point2D > points, // input
+			float marginThickness
 	) {
 		ArrayList< Point2D > newPoints = new ArrayList< Point2D >();
 		if ( points.size() == 0 ) {
@@ -286,14 +286,14 @@ public class Point2DUtil {
 
 	// Returns false if the PCA fails.
 	static public boolean principleComponentAnalysis(
-		// Input
-		Point2D [] points,
+			// Input
+			Point2D [] points,
 
-		// Ouput.
-		// The 1st eigenvector is the principle one.
-		Vector2D eigenvector1,
-		Vector2D eigenvector2,
-		double [] eigenvalues // output; caller must pass in a 2-element array (for eigenvalue1 and eigenvalue2)
+			// Ouput.
+			// The 1st eigenvector is the principle one.
+			Vector2D eigenvector1,
+			Vector2D eigenvector2,
+			double [] eigenvalues // output; caller must pass in a 2-element array (for eigenvalue1 and eigenvalue2)
 	) {
 		if ( points.length < 2 )
 			return false;
@@ -372,10 +372,10 @@ public class Point2DUtil {
 	// Implementation based on Michel Beaudouin-Lafon http://doi.acm.org/10.1145/502348.502371
 	//
 	static public void transformPointsBasedOnDisplacementOfOnePoint(
-		ArrayList<Point2D> points,
-		// these should, of course, be in the same coordinate system as the points to transform
-		Point2D P_old,
-		Point2D P_new
+			ArrayList<Point2D> points,
+			// these should, of course, be in the same coordinate system as the points to transform
+			Point2D P_old,
+			Point2D P_new
 	) {
 		Point2D centroid = computeCentroidOfPoints( points );
 		Vector2D v1 = Point2D.diff( P_old, centroid );
@@ -383,8 +383,8 @@ public class Point2DUtil {
 		float rotationAngle = Vector2D.computeSignedAngle( v1, v2 );
 		float lengthToPreserve = v1.length();
 		Point2D newCentroid = Point2D.sum(
-			P_new,
-			Vector2D.mult( v2.normalized(), - lengthToPreserve )
+				P_new,
+				Vector2D.mult( v2.normalized(), - lengthToPreserve )
 		);
 		Vector2D translation = Point2D.diff( newCentroid, centroid );
 		float cosine = (float)Math.cos( rotationAngle );
@@ -398,22 +398,35 @@ public class Point2DUtil {
 		}
 	}
 
+	static public void translatePointsBasedOnDisplacementOfOnePoint(
+			ArrayList<Point2D> points,
+			// these should, of course, be in the same coordinate system as the points to transform
+			Point2D P_old,
+			Point2D P_new
+	) {
+		Vector2D translation = Point2D.diff( P_old, P_new );
+		for ( Point2D p : points ) {
+			p.get()[0] = p.x() - translation.x();
+			p.get()[1] = p.y() - translation.y();
+		}
+	}
+
 	// This can be used to implement bimanual (2-handed) manipulation,
 	// or 2-finger manipulation, as in a "pinch" gesture
 	static public void compute2DTransformBasedOnDisplacementOfTwoPoints(
-		// input
-		Point2D A_old, Point2D B_old,
-		Point2D A_new, Point2D B_new,
+			// input
+			Point2D A_old, Point2D B_old,
+			Point2D A_new, Point2D B_new,
 
-		// output
-		Vector2D translation,
-		Point2D rotationCenter,
-		// Output.  Caller must pass in a 1-element array used to pass value back to caller.
-		// Angle is in radians.
-		// A positive value means a counterclockwise rotation in a (x+ right, y+ up) system.
-		float [] rotationAngle,
-		// Output.  Caller must pass in a 1-element array used to pass value back to caller.
-		float [] scaleFactor
+			// output
+			Vector2D translation,
+			Point2D rotationCenter,
+			// Output.  Caller must pass in a 1-element array used to pass value back to caller.
+			// Angle is in radians.
+			// A positive value means a counterclockwise rotation in a (x+ right, y+ up) system.
+			float [] rotationAngle,
+			// Output.  Caller must pass in a 1-element array used to pass value back to caller.
+			float [] scaleFactor
 	) {
 		// Compute midpoints of each pair of points
 		Point2D M1 = Point2D.average( A_old, B_old );
@@ -439,18 +452,18 @@ public class Point2DUtil {
 	// This can be used to implement bimanual (2-handed) manipulation,
 	// or 2-finger manipulation, as in a "pinch" gesture
 	static public void transformPointsBasedOnDisplacementOfTwoPoints(
-		ArrayList<Point2D> points,
-		// these should, of course, be in the same coordinate system as the points to transform
-		Point2D A_old, Point2D B_old,
-		Point2D A_new, Point2D B_new
+			ArrayList<Point2D> points,
+			// these should, of course, be in the same coordinate system as the points to transform
+			Point2D A_old, Point2D B_old,
+			Point2D A_new, Point2D B_new
 	) {
 		Vector2D translation = new Vector2D();
 		Point2D rotationCenter = new Point2D();
 		float [] rotationAngle = new float[1];
 		float [] scaleFactor = new float[1];
 		compute2DTransformBasedOnDisplacementOfTwoPoints(
-			A_old, B_old, A_new, B_new,
-			translation, rotationCenter, rotationAngle, scaleFactor
+				A_old, B_old, A_new, B_new,
+				translation, rotationCenter, rotationAngle, scaleFactor
 		);
 
 		float cosine = (float)Math.cos(rotationAngle[0]);
@@ -491,14 +504,14 @@ public class Point2DUtil {
 	// as implemented below.
 	//
 	static public float computeAverageAngle(
-		ArrayList< Float > angles, // angles, in radians
-		float defaultAverageAngle  // average angle to return if the given angles all cancel out, or if angles.size() == 0
+			ArrayList< Float > angles, // angles, in radians
+			float defaultAverageAngle  // average angle to return if the given angles all cancel out, or if angles.size() == 0
 	) {
 		Vector2D averageRotationVector = new Vector2D();
 		for ( float angle : angles ) {
 			averageRotationVector = Vector2D.sum(
-				averageRotationVector,
-				new Vector2D( (float)Math.cos(angle), (float)Math.sin(angle) )
+					averageRotationVector,
+					new Vector2D( (float)Math.cos(angle), (float)Math.sin(angle) )
 			);
 		}
 		if ( averageRotationVector.length() == 0 )
@@ -506,7 +519,7 @@ public class Point2DUtil {
 		return averageRotationVector.angle();
 	}
 	static public float computeAverageAngle(
-		ArrayList< Float > angles
+			ArrayList< Float > angles
 	) {
 		return computeAverageAngle( angles, 0 );
 	}

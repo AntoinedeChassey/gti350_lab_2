@@ -40,5 +40,9 @@ class ShapeContainer {
 			rect.bound( s.getBoundingRectangle() );
 		return rect;
 	}
+
+	public void empty_container(){
+		shapes.clear();
+	}
 }
 
